@@ -9,7 +9,7 @@ mongoose.connect("mongodb://127.0.0.1:27017/authDemo");
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
 db.once("open", () => {
-  console.log("Database Connected!");
+    console.log("Database Connected!");
 });
 
 app.set('view engine', 'ejs');
@@ -26,13 +26,34 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-    const {password, username} = req.body.user;
+    const { password, username } = req.body.user;
     const hash = await bcrpyt.hash(password, 12);
     const newUser = await new User({
         username, password: hash
     });
     await newUser.save();
     res.redirect('/');
+});
+
+app.get('/login', (req, res) => {
+    res.render('login');
+});
+app.post('/login', async (req, res) => {
+    const { username, password } = req.body.user;
+    const user = await User.findOne({ username });
+    if (user) {
+        const validPw = await bcrpyt.compare(password, user.password);
+        console.log(user);
+        console.log(validPw);
+        if (validPw) {
+            res.send('Logging in!')
+        } else {
+            res.send('Try Again')
+        }
+    } else {
+        res.send('Username or PW incorrect')
+    }
+    
 });
 
 app.get('/secret', (req, res) => {
