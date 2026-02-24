@@ -3,6 +3,7 @@ const app = express();
 const User = require('./models/user');
 const mongoose = require('mongoose');
 const bcrpyt = require('bcrypt');
+const session = require('express-session')
 
 mongoose.connect("mongodb://127.0.0.1:27017/authDemo");
 
@@ -16,6 +17,7 @@ app.set('view engine', 'ejs');
 app.set('views', 'views');
 
 app.use(express.urlencoded({ extended: true }));
+app.use(session({ secret: 'notagoodsecret' }));
 
 app.get('/', (req, res) => {
     res.send('Welcome to the churn');
@@ -32,6 +34,7 @@ app.post('/register', async (req, res) => {
         username, password: hash
     });
     await newUser.save();
+    req.session.user_id = user._id;
     res.redirect('/');
 });
 
@@ -43,21 +46,24 @@ app.post('/login', async (req, res) => {
     const user = await User.findOne({ username });
     if (user) {
         const validPw = await bcrpyt.compare(password, user.password);
-        console.log(user);
-        console.log(validPw);
         if (validPw) {
-            res.send('Logging in!')
+            req.session.user_id = user._id;
+            res.redirect('/secret');
         } else {
-            res.send('Try Again')
+            res.redirect('/login');
         }
     } else {
         res.send('Username or PW incorrect')
     }
-    
+
 });
 
 app.get('/secret', (req, res) => {
-    res.send('This is a secret! Only shown if logged in...')
+    if (!req.session.user_id) {
+        res.redirect('/');
+    }
+    res.send('This is a secret! Only shown if logged in...');
+
 });
 
 app.listen(3000, () => {
