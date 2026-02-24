@@ -17,7 +17,14 @@ app.set('view engine', 'ejs');
 app.set('views', 'views');
 
 app.use(express.urlencoded({ extended: true }));
-app.use(session({ secret: 'notagoodsecret' }));
+app.use(session({ secret: 'notagoodsecret', resave: false, saveUninitialized: true }));
+
+const userLoggedIn = (req, res, next) => {
+  if(!req.session.user_id){
+    return res.redirect('/login');
+  }  
+  next();
+};
 
 app.get('/', (req, res) => {
     res.send('Welcome to the churn');
@@ -58,12 +65,17 @@ app.post('/login', async (req, res) => {
 
 });
 
-app.get('/secret', (req, res) => {
-    if (!req.session.user_id) {
-        res.redirect('/');
-    }
-    res.send('This is a secret! Only shown if logged in...');
+app.post('/logout', (req, res) => {
+    req.session.user_id = null;
+    req.session.destroy();
+    res.redirect('/login');
+});
 
+app.get('/secret',userLoggedIn, (req, res) => {
+    res.render('secret.ejs');
+});
+app.get('/topsecret',userLoggedIn, (req, res) => {
+    res.send('Top Secret');
 });
 
 app.listen(3000, () => {
