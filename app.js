@@ -20,10 +20,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: 'notagoodsecret', resave: false, saveUninitialized: true }));
 
 const userLoggedIn = (req, res, next) => {
-  if(!req.session.user_id){
-    return res.redirect('/login');
-  }  
-  next();
+    if (!req.session.user_id) {
+        return res.redirect('/login');
+    }
+    next();
 };
 
 app.get('/', (req, res) => {
@@ -36,12 +36,9 @@ app.get('/register', (req, res) => {
 
 app.post('/register', async (req, res) => {
     const { password, username } = req.body.user;
-    const hash = await bcrpyt.hash(password, 12);
-    const newUser = await new User({
-        username, password: hash
-    });
+    const newUser = await new User({username, password});
     await newUser.save();
-    req.session.user_id = user._id;
+    req.session.user_id = newUser._id;
     res.redirect('/');
 });
 
@@ -50,17 +47,14 @@ app.get('/login', (req, res) => {
 });
 app.post('/login', async (req, res) => {
     const { username, password } = req.body.user;
-    const user = await User.findOne({ username });
-    if (user) {
-        const validPw = await bcrpyt.compare(password, user.password);
-        if (validPw) {
-            req.session.user_id = user._id;
-            res.redirect('/secret');
-        } else {
-            res.redirect('/login');
-        }
+
+    const foundUser = await User.findAndValidate(username, password);
+
+    if (foundUser) {
+        req.session.user_id = foundUser._id;
+        res.redirect('/secret');
     } else {
-        res.send('Username or PW incorrect')
+        res.redirect('/login');
     }
 
 });
@@ -71,10 +65,10 @@ app.post('/logout', (req, res) => {
     res.redirect('/login');
 });
 
-app.get('/secret',userLoggedIn, (req, res) => {
+app.get('/secret', userLoggedIn, (req, res) => {
     res.render('secret.ejs');
 });
-app.get('/topsecret',userLoggedIn, (req, res) => {
+app.get('/topsecret', userLoggedIn, (req, res) => {
     res.send('Top Secret');
 });
 
